@@ -1,0 +1,114 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  USER
+}
+
+enum Priority {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+enum Status {
+  NOT_STARTED
+  IN_PROGRESS
+  ON_HOLD
+  COMPLETED
+}
+
+model User {
+  id                 String   @id @default(uuid())
+  name               String
+  email              String   @unique
+  passwordHash       String
+  role               Role     @default(USER)
+  createdAt          DateTime @default(now())
+  mustChangePassword Boolean  @default(false)
+
+  taskHistories      TaskHistory[]
+  credentialRows     CredentialRow[]
+}
+
+model Employee {
+  id          String    @id @default(uuid())
+  name        String
+  designation String
+  phone       String
+  email       String
+  joinedAt    DateTime?
+  tasks       Task[]
+}
+
+model Task {
+  id           String   @id @default(uuid())
+  title        String
+  description  String
+  assignedDate DateTime @default(now())
+  deadline     DateTime
+  priority     Priority @default(MEDIUM)
+  status       Status   @default(NOT_STARTED)
+  progress     Int      @default(0) // 0-100
+  remarks      String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  employeeId   String
+  employee     Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  history      TaskHistory[]
+}
+
+model TaskHistory {
+  id          String   @id @default(uuid())
+  taskId      String
+  oldProgress Int
+  newProgress Int
+  note        String?
+  updatedById String
+  createdAt   DateTime @default(now())
+
+  task        Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  updatedBy   User @relation(fields: [updatedById], references: [id])
+}
+
+model CredentialColumn {
+  id        String   @id @default(uuid())
+  name      String
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+
+  cells     CredentialCell[]
+}
+
+model CredentialRow {
+  id          String   @id @default(uuid())
+  createdAt   DateTime @default(now())
+  createdById String
+
+  createdBy   User     @relation(fields: [createdById], references: [id])
+  cells       CredentialCell[]
+}
+
+model CredentialCell {
+  id        String   @id @default(uuid())
+  rowId     String
+  columnId  String
+  value     String
+
+  row       CredentialRow    @relation(fields: [rowId], references: [id], onDelete: Cascade)
+  column    CredentialColumn @relation(fields: [columnId], references: [id], onDelete: Cascade)
+
+  @@unique([rowId, columnId])
+}
