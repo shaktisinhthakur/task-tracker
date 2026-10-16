@@ -27,9 +27,9 @@ export async function GET() {
     });
 
     // Decrypt cell values
-    const decryptedRows = rows.map(row => ({
+    const decryptedRows = rows.map((row: any) => ({
       ...row,
-      cells: row.cells.map(cell => ({
+      cells: row.cells.map((cell: any) => ({
         ...cell,
         value: decrypt(cell.value)
       }))
@@ -60,7 +60,7 @@ export async function POST(request: Request) {
     
     if (action === 'ADD_ROW') {
       const row = await prisma.credentialRow.create({
-        data: { createdById: user.id }
+        data: { createdById: (user as any).id as string }
       });
       return NextResponse.json({ ...row, cells: [] });
     }
