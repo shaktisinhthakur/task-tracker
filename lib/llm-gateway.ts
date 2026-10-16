@@ -48,11 +48,12 @@ export const PROVIDER_CONFIGS: Record<
   groq: {
     name: 'Groq (Ultra-Fast Inference)',
     description: 'Primary high-speed Llama-3 inference engine with lightning response times.',
-    defaultModel: 'llama-3.3-70b-versatile',
+    defaultModel: 'llama-3.1-8b-instant',
     visionModel: 'llama-3.2-11b-vision-preview',
     models: [
-      { id: 'llama-3.3-70b-versatile', label: 'Llama 3.3 70B Versatile (Recommended)' },
-      { id: 'llama-3.1-8b-instant', label: 'Llama 3.1 8B Instant (Ultra-fast)' },
+      { id: 'llama-3.1-8b-instant', label: 'Llama 3.1 8B Instant (Ultra-fast & Recommended)' },
+      { id: 'llama-3.3-70b-versatile', label: 'Llama 3.3 70B Versatile' },
+      { id: 'llama-3.1-70b-versatile', label: 'Llama 3.1 70B Versatile' },
       { id: 'llama-3.2-11b-vision-preview', label: 'Llama 3.2 11B Vision (Multimodal)', supportsVision: true },
       { id: 'mixtral-8x7b-32768', label: 'Mixtral 8x7B (32k context)' },
     ],
@@ -171,7 +172,7 @@ async function callGroq(
     }
   });
 
-  const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+  let res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${apiKey}`,
@@ -185,6 +186,27 @@ async function callGroq(
     }),
   });
 
+  let finalModel = chosenModel;
+
+  // Resilient fallback: If model was 404 (e.g. tier-restricted or model_not_found), fallback to llama-3.1-8b-instant
+  if (!res.ok && res.status === 404 && chosenModel !== 'llama-3.1-8b-instant') {
+    console.warn(`Groq model "${chosenModel}" returned 404. Automatically falling back to "llama-3.1-8b-instant"...`);
+    finalModel = 'llama-3.1-8b-instant';
+    res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: finalModel,
+        messages: formattedMessages,
+        temperature: 0.3,
+        max_tokens: 2048,
+      }),
+    });
+  }
+
   if (!res.ok) {
     const errorBody = await res.text();
     throw new Error(`Groq API error (${res.status}): ${errorBody}`);
@@ -196,7 +218,7 @@ async function callGroq(
   return {
     content,
     provider: 'groq',
-    model: chosenModel,
+    model: finalModel,
     usage: {
       promptTokens: data.usage?.prompt_tokens,
       completionTokens: data.usage?.completion_tokens,
