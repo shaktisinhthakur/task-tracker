@@ -42,7 +42,7 @@ export default function FloatingChatWidget() {
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [selectedProvider, setSelectedProvider] = useState<'groq' | 'openai' | 'anthropic' | 'gemini'>('groq');
-  const [selectedModel, setSelectedModel] = useState<string>('llama-3.3-70b-versatile');
+  const [selectedModel, setSelectedModel] = useState<string>('llama-3.1-8b-instant');
   const [useRag, setUseRag] = useState(true);
   const [attachedImage, setAttachedImage] = useState<{ name: string; mimeType: string; base64: string } | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -55,7 +55,7 @@ export default function FloatingChatWidget() {
       content: `👋 Hello! I am your **TaskTracker AI Copilot** powered by **Groq** and live **RAG** (Retrieval Augmented Generation).\n\nI have real-time visibility into all your tasks, deadlines, employee assignments, and workload metrics.\n\nAsk me anything or pick a quick prompt below:`,
       timestamp: new Date(),
       provider: 'groq',
-      model: 'llama-3.3-70b-versatile',
+      model: 'llama-3.1-8b-instant',
     },
   ]);
 
@@ -65,8 +65,9 @@ export default function FloatingChatWidget() {
   // Available models mapping
   const modelsByProvider: Record<string, { id: string; label: string; vision?: boolean }[]> = {
     groq: [
-      { id: 'llama-3.3-70b-versatile', label: 'Llama 3.3 70B (Fastest)' },
-      { id: 'llama-3.1-8b-instant', label: 'Llama 3.1 8B (Instant)' },
+      { id: 'llama-3.1-8b-instant', label: 'Llama 3.1 8B (Ultra-fast & Default)' },
+      { id: 'llama-3.3-70b-versatile', label: 'Llama 3.3 70B' },
+      { id: 'llama-3.1-70b-versatile', label: 'Llama 3.1 70B' },
       { id: 'llama-3.2-11b-vision-preview', label: 'Llama 3.2 Vision (Multimodal)', vision: true },
       { id: 'mixtral-8x7b-32768', label: 'Mixtral 8x7B' },
     ],
