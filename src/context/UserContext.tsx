@@ -1,4 +1,4 @@
-import '../styles/globals.css'
+import React from 'react';
 
 // Mock data for demonstration
 const mockData = {
@@ -27,56 +27,55 @@ const mockData = {
   }
 };
 
-// Type definitions
-// export interface UserProfile {
-//   id: string;
-//   email: string;
-//   password: string;
-//   name: string;
-//   designation: string;
-//   phone: string;
-//   joined: string;
-//   role: 'admin' | 'user';
-// }
+export interface UserProfile {
+  id: string;
+  email: string;
+  password?: string;
+  name: string;
+  designation: string;
+  phone: string;
+  joined: string;
+  role: 'admin' | 'user';
+}
 
-// export interface TaskItem {
-//   id: string;
-//   title: string;
-//   description: string;
-//   employeeId: string;
-//   assignedDate: string;
-//   deadline: string;
-//   priority: 'Low' | 'Medium' | 'High';
-//   status: 'Not Started' | 'In Progress' | 'On Hold' | 'Completed';
-//   progress: number;
-//   remarks: string;
-//   history: { date: string; oldProgress: number; newProgress: number; note: string }[];
-// }
+export interface TaskItem {
+  id: string;
+  title: string;
+  description: string;
+  employeeId: string;
+  assignedDate: string;
+  deadline: string;
+  priority: 'Low' | 'Medium' | 'High';
+  status: 'Not Started' | 'In Progress' | 'On Hold' | 'Completed';
+  progress: number;
+  remarks: string;
+  history: { date: string; oldProgress: number; newProgress: number; note: string }[];
+}
 
-// export interface Employee {
-//   id: string;
-//   email: string;
-//   password: string;
-//   name: string;
-//   designation: string;
-//   phone: string;
-//   joined: string;
-//   role: 'admin' | 'user';
-// }
+export interface Employee {
+  id: string;
+  email: string;
+  password?: string;
+  name: string;
+  designation: string;
+  phone: string;
+  joined: string;
+  role: 'admin' | 'user';
+}
 
-// export interface UserContextType {
-//   login: (email: string, password: string) => boolean;
-//   logout: () => void;
-//   signup: (user: Omit<UserProfile, 'id'>) => boolean;
-//   currentUser: UserProfile | null;
-//   employees: Employee[];
-//   tasks: TaskItem[];
-//   addEmployee: (employee: Omit<Employee, 'id'>) => void;
-//   addTask: (task: Omit<TaskItem, 'id'>) => void;
-//   updateTask: (id: string, updates: Partial<TaskItem>) => void;
-//   deleteTask: (id: string) => void;
-//   updateProgress: (id: string, progress: number, note: string) => void;
-// }
+export interface UserContextType {
+  login: (email: string, password: string) => boolean;
+  logout: () => void;
+  signup: (user: Omit<UserProfile, 'id'>) => boolean;
+  currentUser: UserProfile | null;
+  employees: Employee[];
+  tasks: TaskItem[];
+  addEmployee: (employee: Omit<Employee, 'id'>) => void;
+  addTask: (task: Omit<TaskItem, 'id'>) => void;
+  updateTask: (id: string, updates: Partial<TaskItem>) => void;
+  deleteTask: (id: string) => void;
+  updateProgress: (id: string, progress: number, note: string) => void;
+}
 
 // Create a mock context provider
 const UserContext = React.createContext<UserContextType | null>(null);
