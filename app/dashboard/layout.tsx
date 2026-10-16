@@ -1,4 +1,5 @@
 import Sidebar from '@/components/Sidebar';
+import FloatingChatWidget from '@/components/FloatingChatWidget';
 import React from 'react';
 
 export default function DashboardLayout({
@@ -14,6 +15,9 @@ export default function DashboardLayout({
         <div className="absolute top-0 left-0 w-full h-96 bg-gradient-to-b from-blue-900/20 to-transparent pointer-events-none -z-10"></div>
         {children}
       </main>
+      {/* Universal Floating AI Chatbot Copilot */}
+      <FloatingChatWidget />
     </div>
   );
 }
+
