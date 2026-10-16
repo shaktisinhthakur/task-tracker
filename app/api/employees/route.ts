@@ -93,7 +93,7 @@ export async function DELETE(request: Request) {
       return NextResponse.json({ error: 'Employee not found' }, { status: 404 });
     }
 
-    await prisma.$transaction(async (tx) => {
+    await prisma.$transaction(async (tx: any) => {
       await tx.employee.delete({ where: { id } });
       const user = await tx.user.findUnique({ where: { email: employee.email } });
       if (user) {
