@@ -31,6 +31,18 @@ A modern, full-featured Employee Task Tracker built with **Next.js**, featuring 
 - Overdue tasks highlighted in red
 - Due within 3 days highlighted in orange
 
+### 🤖 RAG-Powered AI Copilot & Multi-Model Studio
+- **Grounded Task Intelligence**: Connects directly to live task tracker database via RAG (Retrieval-Augmented Generation) to analyze tasks, deadlines, assignee workloads, and update histories.
+- **Multi-Model Provider Gateway**:
+  - **Groq (Primary / Default)**: Lightning-fast inference with Llama 3.3 70B, Llama 3.1 8B, and Mixtral 8x7B.
+  - **OpenAI (ChatGPT)**: GPT-4o, GPT-4o Mini, and GPT-3.5 Turbo.
+  - **Anthropic (Claude)**: Claude 3.5 Sonnet and Claude 3.5 Haiku.
+  - **Google Gemini**: Gemini 1.5 Flash, Gemini 1.5 Pro, and Gemini 2.0 Flash.
+- **Multimodal Vision**: Attach screenshots, project wireframes, or error logs for instant AI visual inspection.
+- **Universal Floating Widget**: Dockable copilot in bottom-right corner of all dashboard pages with quick prompt pills.
+- **Dedicated AI Studio**: Full-screen workspace (`/dashboard/ai-assistant`) with custom document ingestion.
+- **Flexible Key Management (BYOK)**: In-app interactive key settings with live connection test and `.env` fallback.
+
 ### 🎨 Dynamic UI Features
 - **Dark/Light mode** toggle
 - **Responsive design** - Works on desktop and mobile
@@ -84,12 +96,19 @@ task-tracker/
    npm install
    ```
 
-3. **Run the development server**
+3. **Configure Environment Variables (Optional for AI Copilot)**
+   ```bash
+   cp .env.example .env
+   # Add your GROQ_API_KEY (Primary - free at https://console.groq.com/keys)
+   # Or configure keys interactively in the UI Settings modal
+   ```
+
+4. **Run the development server**
    ```bash
    npm run dev
    ```
 
-4. **Open in browser**
+5. **Open in browser**
    ```
    http://localhost:3000
    ```
