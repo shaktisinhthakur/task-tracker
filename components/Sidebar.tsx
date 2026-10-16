@@ -1,7 +1,7 @@
 'use client';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, Users, CheckSquare, Key, LogOut } from 'lucide-react';
+import { Home, Users, CheckSquare, Key, LogOut, Sparkles } from 'lucide-react';
 import clsx from 'clsx';
 
 export default function Sidebar() {
@@ -11,6 +11,7 @@ export default function Sidebar() {
     { name: 'Dashboard', href: '/dashboard', icon: Home },
     { name: 'Employees', href: '/dashboard/employees', icon: Users },
     { name: 'Tasks', href: '/dashboard/tasks', icon: CheckSquare },
+    { name: 'AI Assistant', href: '/dashboard/ai-assistant', icon: Sparkles, isAi: true },
     { name: 'Credentials', href: '/dashboard/credentials', icon: Key },
   ];
 
@@ -28,14 +29,22 @@ export default function Sidebar() {
               key={link.name}
               href={link.href}
               className={clsx(
-                'flex items-center space-x-3 px-4 py-3 rounded-xl transition-all duration-300 relative group',
+                'flex items-center justify-between px-4 py-3 rounded-xl transition-all duration-300 relative group',
                 isActive
                   ? 'bg-blue-600/20 text-blue-400 shadow-[0_0_15px_rgba(37,99,235,0.2)]'
-                  : 'hover:bg-slate-800 text-slate-300 hover:text-white'
+                  : 'hover:bg-slate-800 text-slate-300 hover:text-white',
+                link.isAi && !isActive && 'hover:text-purple-300'
               )}
             >
-              <Icon className="w-5 h-5" />
-              <span className="font-medium">{link.name}</span>
+              <div className="flex items-center space-x-3">
+                <Icon className={clsx('w-5 h-5', link.isAi && 'text-purple-400')} />
+                <span className="font-medium">{link.name}</span>
+              </div>
+              {link.isAi && (
+                <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-gradient-to-r from-blue-500/20 to-purple-500/20 text-purple-300 border border-purple-500/30">
+                  RAG
+                </span>
+              )}
               {isActive && (
                 <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-blue-500 rounded-r-full shadow-[0_0_10px_rgba(59,130,246,0.5)]"></span>
               )}
