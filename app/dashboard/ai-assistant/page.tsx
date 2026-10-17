@@ -44,17 +44,17 @@ export default function AiAssistantPage() {
     {
       id: 'welcome',
       role: 'assistant',
-      content: `### Welcome to TaskTracker AI Studio 🚀\n\nI am connected to your live TaskTracker database via **RAG (Retrieval-Augmented Generation)**.\n\n* **Primary LLM:** Groq (Llama 3.1 8B & Llama 3.2 Vision)\n* **Multi-Model Support:** Switch anytime to OpenAI ChatGPT, Anthropic Claude, or Google Gemini.\n* **Knowledge Context:** Real-time tasks, deadlines, employee assignments, and any custom documents you upload in the sidebar.\n\nHow can I help you streamline your projects today?`,
+      content: `### Welcome to TaskTracker AI Studio 🚀\n\nI am connected to your live TaskTracker database via **RAG (Retrieval-Augmented Generation)**.\n\n* **Primary LLM:** Groq (GPT OSS 120B & Qwen 3.8 Vision)\n* **Multi-Model Support:** Switch anytime to OpenAI ChatGPT, Anthropic Claude, or Google Gemini.\n* **Knowledge Context:** Real-time tasks, deadlines, employee assignments, and any custom documents you upload in the sidebar.\n\nHow can I help you streamline your projects today?`,
       timestamp: new Date(),
       provider: 'groq',
-      model: 'llama-3.1-8b-instant',
+      model: 'openai/gpt-oss-120b',
     },
   ]);
 
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [selectedProvider, setSelectedProvider] = useState<'groq' | 'openai' | 'anthropic' | 'gemini'>('groq');
-  const [selectedModel, setSelectedModel] = useState<string>('llama-3.1-8b-instant');
+  const [selectedModel, setSelectedModel] = useState<string>('openai/gpt-oss-120b');
   const [useRag, setUseRag] = useState(true);
   const [attachedImage, setAttachedImage] = useState<{ name: string; mimeType: string; base64: string } | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -75,11 +75,11 @@ export default function AiAssistantPage() {
 
   const modelsByProvider: Record<string, { id: string; label: string; vision?: boolean }[]> = {
     groq: [
-      { id: 'llama-3.1-8b-instant', label: 'Llama 3.1 8B Instant (Ultra-fast & Default)' },
+      { id: 'openai/gpt-oss-120b', label: 'GPT OSS 120B (High Reasoning & Default)' },
+      { id: 'qwen/qwen3.8-27b', label: 'Qwen 3.8 27B (Multimodal Vision)', vision: true },
+      { id: 'openai/gpt-oss-20b', label: 'GPT OSS 20B (Ultra-fast)' },
+      { id: 'llama-3.1-8b-instant', label: 'Llama 3.1 8B Instant' },
       { id: 'llama-3.3-70b-versatile', label: 'Llama 3.3 70B Versatile' },
-      { id: 'llama-3.1-70b-versatile', label: 'Llama 3.1 70B Versatile' },
-      { id: 'llama-3.2-11b-vision-preview', label: 'Llama 3.2 Vision (Multimodal)', vision: true },
-      { id: 'mixtral-8x7b-32768', label: 'Mixtral 8x7B (32k context)' },
     ],
     openai: [
       { id: 'gpt-4o-mini', label: 'GPT-4o Mini', vision: true },
