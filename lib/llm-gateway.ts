@@ -47,15 +47,15 @@ export const PROVIDER_CONFIGS: Record<
 > = {
   groq: {
     name: 'Groq (Ultra-Fast Inference)',
-    description: 'Primary high-speed Llama-3 inference engine with lightning response times.',
-    defaultModel: 'llama-3.1-8b-instant',
-    visionModel: 'llama-3.2-11b-vision-preview',
+    description: 'Primary high-speed inference engine with lightning response times.',
+    defaultModel: 'openai/gpt-oss-120b',
+    visionModel: 'qwen/qwen3.8-27b',
     models: [
-      { id: 'llama-3.1-8b-instant', label: 'Llama 3.1 8B Instant (Ultra-fast & Recommended)' },
+      { id: 'openai/gpt-oss-120b', label: 'GPT OSS 120B (High Reasoning & Default)' },
+      { id: 'qwen/qwen3.8-27b', label: 'Qwen 3.8 27B (Multimodal Vision)', supportsVision: true },
+      { id: 'openai/gpt-oss-20b', label: 'GPT OSS 20B (Ultra-fast)' },
+      { id: 'llama-3.1-8b-instant', label: 'Llama 3.1 8B Instant' },
       { id: 'llama-3.3-70b-versatile', label: 'Llama 3.3 70B Versatile' },
-      { id: 'llama-3.1-70b-versatile', label: 'Llama 3.1 70B Versatile' },
-      { id: 'llama-3.2-11b-vision-preview', label: 'Llama 3.2 11B Vision (Multimodal)', supportsVision: true },
-      { id: 'mixtral-8x7b-32768', label: 'Mixtral 8x7B (32k context)' },
     ],
     envKey: 'GROQ_API_KEY',
     apiKeyDocsUrl: 'https://console.groq.com/keys',
@@ -134,6 +134,39 @@ function cleanBase64(raw: string): { cleanData: string; mimeType: string } {
 }
 
 /**
+ * Helper to dynamically discover active Groq models for a given API key
+ */
+export async function getActiveGroqModel(apiKey: string): Promise<string> {
+  try {
+    const res = await fetch('https://api.groq.com/openai/v1/models', {
+      headers: { Authorization: `Bearer ${apiKey}` },
+    });
+    if (res.ok) {
+      const data = await res.json();
+      const models = data.data?.map((m: any) => m.id) || [];
+      const priorityOrder = [
+        'openai/gpt-oss-120b',
+        'qwen/qwen3.8-27b',
+        'openai/gpt-oss-20b',
+        'llama-3.1-8b-instant',
+        'llama-3.3-70b-versatile',
+        'llama-3.1-70b-versatile',
+      ];
+      for (const p of priorityOrder) {
+        if (models.includes(p)) return p;
+      }
+      const textModel = models.find(
+        (m: string) => !m.includes('whisper') && !m.includes('guard') && !m.includes('orpheus')
+      );
+      if (textModel) return textModel;
+    }
+  } catch (e) {
+    console.warn('Failed to query Groq models list', e);
+  }
+  return 'openai/gpt-oss-120b';
+}
+
+/**
  * Call Groq API (OpenAI-compatible)
  */
 async function callGroq(
@@ -143,7 +176,7 @@ async function callGroq(
   messages: ChatMessage[],
   images: ImageAttachment[] = []
 ): Promise<LLMResponse> {
-  const chosenModel = images.length > 0 && !model.includes('vision')
+  const chosenModel = images.length > 0 && !model.includes('vision') && !model.includes('qwen')
     ? PROVIDER_CONFIGS.groq.visionModel
     : model || PROVIDER_CONFIGS.groq.defaultModel;
 
@@ -188,10 +221,11 @@ async function callGroq(
 
   let finalModel = chosenModel;
 
-  // Resilient fallback: If model was 404 (e.g. tier-restricted or model_not_found), fallback to llama-3.1-8b-instant
-  if (!res.ok && res.status === 404 && chosenModel !== 'llama-3.1-8b-instant') {
-    console.warn(`Groq model "${chosenModel}" returned 404. Automatically falling back to "llama-3.1-8b-instant"...`);
-    finalModel = 'llama-3.1-8b-instant';
+  // Resilient fallback: If model returned 404 (model_not_found), dynamically query available models and retry!
+  if (!res.ok && res.status === 404) {
+    const activeModel = await getActiveGroqModel(apiKey);
+    console.warn(`Groq model "${chosenModel}" returned 404. Automatically falling back to active model "${activeModel}"...`);
+    finalModel = activeModel;
     res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -493,16 +527,39 @@ export async function testLlmApiKey(
   model?: string
 ): Promise<{ ok: boolean; message: string; modelUsed: string }> {
   try {
+    let modelToUse = model;
+    if (provider === 'groq') {
+      if (!model || model.includes('llama')) {
+        modelToUse = await getActiveGroqModel(apiKey);
+      }
+    }
+
     const testMessages: ChatMessage[] = [
       { role: 'user', content: 'Say "Connection successful" in 2 words.' },
     ];
-    const res = await executeLLM({
-      provider,
-      apiKeyOverride: apiKey,
-      model,
-      messages: testMessages,
-      systemPrompt: 'Respond concisely.',
-    });
+    let res;
+    try {
+      res = await executeLLM({
+        provider,
+        apiKeyOverride: apiKey,
+        model: modelToUse,
+        messages: testMessages,
+        systemPrompt: 'Respond concisely.',
+      });
+    } catch (err: any) {
+      if (provider === 'groq') {
+        const fallbackModel = await getActiveGroqModel(apiKey);
+        res = await executeLLM({
+          provider,
+          apiKeyOverride: apiKey,
+          model: fallbackModel,
+          messages: testMessages,
+          systemPrompt: 'Respond concisely.',
+        });
+      } else {
+        throw err;
+      }
+    }
 
     return {
       ok: true,
