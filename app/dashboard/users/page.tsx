@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { Shield, ShieldAlert, Key, User, Plus, X, Copy } from 'lucide-react';
+import { Shield, ShieldAlert, Key, User, Plus, X, Copy, Mail, CheckCircle2, AlertTriangle, RefreshCw } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 export default function UsersPage() {
@@ -8,7 +8,15 @@ export default function UsersPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [generatedCreds, setGeneratedCreds] = useState<{ email: string; pass: string } | null>(null);
+  const [isSendingEmail, setIsSendingEmail] = useState(false);
+  const [generatedCreds, setGeneratedCreds] = useState<{
+    name: string;
+    email: string;
+    pass: string;
+    role?: string;
+    emailSent: boolean;
+    emailError?: string;
+  } | null>(null);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -56,14 +64,52 @@ export default function UsersPage() {
       if (!res.ok) throw new Error(data.error || 'Failed to create user');
       
       setUsers([data, ...users]);
-      setGeneratedCreds({ email: formData.email, pass: formData.password });
+      setGeneratedCreds({
+        name: formData.name,
+        email: formData.email,
+        pass: formData.password,
+        role: formData.role,
+        emailSent: Boolean(data.emailSent),
+        emailError: data.emailError
+      });
       setIsModalOpen(false);
+      
+      if (data.emailSent) {
+        toast.success(`User created & credentials emailed to ${formData.email}!`);
+      } else {
+        toast.success('User account created! (Note: Configure SMTP in .env to deliver email)');
+      }
+
       setFormData({ name: '', email: '', password: '', role: 'USER' });
-      toast.success('User account created!');
     } catch (error: any) {
       toast.error(error.message);
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleResendEmail = async () => {
+    if (!generatedCreds) return;
+    setIsSendingEmail(true);
+    try {
+      const res = await fetch('/api/email/resend-credentials', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: generatedCreds.name,
+          email: generatedCreds.email,
+          password: generatedCreds.pass,
+          role: generatedCreds.role,
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to send email');
+      setGeneratedCreds({ ...generatedCreds, emailSent: true, emailError: undefined });
+      toast.success(`Credentials emailed to ${generatedCreds.email}!`);
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to send email');
+    } finally {
+      setIsSendingEmail(false);
     }
   };
 
@@ -91,20 +137,55 @@ export default function UsersPage() {
       </div>
 
       {generatedCreds && (
-        <div className="mb-8 p-6 bg-emerald-500/10 border border-emerald-500/30 rounded-2xl relative">
-          <h3 className="text-emerald-400 font-bold mb-2">Account Created Successfully!</h3>
-          <p className="text-slate-300 mb-4">Please copy these details and send them securely to the user. This is the only time the password will be shown.</p>
-          <div className="bg-slate-900 p-4 rounded-lg font-mono text-sm text-slate-300">
-            <div>Website: {typeof window !== 'undefined' ? window.location.origin : ''}/login</div>
-            <div>Email: {generatedCreds.email}</div>
-            <div>Password: {generatedCreds.pass}</div>
+        <div className="mb-8 p-6 bg-slate-900 border border-slate-700/80 rounded-2xl relative shadow-xl animate-in slide-in-from-top-4 duration-300">
+          <div className="flex justify-between items-start mb-4">
+            <div>
+              <h3 className="text-xl font-bold text-emerald-400 flex items-center gap-2">
+                <CheckCircle2 className="w-5 h-5" /> Account Created Successfully!
+              </h3>
+              <p className="text-slate-300 text-sm mt-1">
+                {generatedCreds.emailSent ? (
+                  <span className="inline-flex items-center gap-1.5 text-emerald-400 font-medium">
+                    <Mail className="w-4 h-4" /> Login password was sent directly to <strong>{generatedCreds.email}</strong>.
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1.5 text-amber-400">
+                    <AlertTriangle className="w-4 h-4" /> Email not sent ({generatedCreds.emailError || 'Configure SMTP in .env'}). Please copy details below or click Send Email.
+                  </span>
+                )}
+              </p>
+            </div>
+            <button onClick={() => setGeneratedCreds(null)} className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition">
+              <X className="w-5 h-5" />
+            </button>
           </div>
-          <button onClick={copyCreds} className="mt-4 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded flex items-center gap-2">
-            <Copy className="w-4 h-4" /> Copy Details
-          </button>
-          <button onClick={() => setGeneratedCreds(null)} className="absolute top-4 right-4 text-slate-400 hover:text-white">
-            <X className="w-5 h-5" />
-          </button>
+
+          <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 font-mono text-sm space-y-1 mb-5">
+            <div><span className="text-slate-500">Portal URL:</span> <span className="text-slate-300">{typeof window !== 'undefined' ? window.location.origin : ''}/login</span></div>
+            <div><span className="text-slate-500">Email:</span> <span className="text-white font-semibold">{generatedCreds.email}</span></div>
+            <div><span className="text-slate-500">Password:</span> <span className="text-emerald-400 font-bold">{generatedCreds.pass}</span></div>
+          </div>
+
+          <div className="flex flex-wrap gap-3">
+            <button onClick={copyCreds} className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl flex items-center gap-2 font-medium transition shadow-md">
+              <Copy className="w-4 h-4" /> Copy Credentials
+            </button>
+            <button
+              onClick={handleResendEmail}
+              disabled={isSendingEmail}
+              className="px-4 py-2.5 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white rounded-xl flex items-center gap-2 font-medium transition shadow-md"
+            >
+              {isSendingEmail ? (
+                <>
+                  <RefreshCw className="w-4 h-4 animate-spin" /> Sending Email...
+                </>
+              ) : (
+                <>
+                  <Mail className="w-4 h-4" /> {generatedCreds.emailSent ? 'Resend Email' : 'Send Credentials via Email'}
+                </>
+              )}
+            </button>
+          </div>
         </div>
       )}
 

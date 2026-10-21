@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { Users, Mail, Phone, Briefcase, Calendar, X, Trash2, CheckCircle2, Copy } from 'lucide-react';
+import { Users, Mail, Phone, Briefcase, Calendar, X, Trash2, CheckCircle2, Copy, AlertTriangle, RefreshCw } from 'lucide-react';
 import toast from 'react-hot-toast';
 import clsx from 'clsx';
 
@@ -12,7 +12,14 @@ export default function EmployeesPage() {
   // Modal state
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [generatedCreds, setGeneratedCreds] = useState<{ email: string; pass: string } | null>(null);
+  const [isSendingEmail, setIsSendingEmail] = useState(false);
+  const [generatedCreds, setGeneratedCreds] = useState<{
+    name: string;
+    email: string;
+    pass: string;
+    emailSent: boolean;
+    emailError?: string;
+  } | null>(null);
   const [selectedEmployee, setSelectedEmployee] = useState<any>(null);
   const [isCopied, setIsCopied] = useState(false);
   const [userRole, setUserRole] = useState<string>('USER');
@@ -59,16 +66,53 @@ export default function EmployeesPage() {
         const errorData = await res.json();
         throw new Error(errorData.error || 'Failed to create employee');
       }
-      const { employee, tempPassword } = await res.json();
+      const data = await res.json();
+      const { employee, tempPassword, emailSent, emailError } = data;
       setEmployees([...employees, employee]);
-      setGeneratedCreds({ email: employee.email, pass: tempPassword });
+      setGeneratedCreds({
+        name: employee.name,
+        email: employee.email,
+        pass: tempPassword,
+        emailSent: Boolean(emailSent),
+        emailError,
+      });
       setIsModalOpen(false);
       setFormData({ name: '', email: '', phone: '', designation: '', joinedAt: new Date().toISOString().split('T')[0] });
-      toast.success('Employee added successfully');
+      
+      if (emailSent) {
+        toast.success(`Employee added & password sent directly to ${employee.email}!`);
+      } else {
+        toast.success('Employee added! (Configure SMTP in .env to deliver email automatically)');
+      }
     } catch (error: any) {
       toast.error(error.message);
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleResendEmail = async () => {
+    if (!generatedCreds) return;
+    setIsSendingEmail(true);
+    try {
+      const res = await fetch('/api/email/resend-credentials', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: generatedCreds.name,
+          email: generatedCreds.email,
+          password: generatedCreds.pass,
+          role: 'USER',
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to send email');
+      setGeneratedCreds({ ...generatedCreds, emailSent: true, emailError: undefined });
+      toast.success(`Credentials emailed to ${generatedCreds.email}!`);
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to send email');
+    } finally {
+      setIsSendingEmail(false);
     }
   };
 
@@ -132,7 +176,17 @@ export default function EmployeesPage() {
                   </span>
                   Account Created Successfully
                 </h3>
-                <p className="text-slate-400 text-sm">Please securely share these temporary credentials with the employee. They will be required to change this password on their first login.</p>
+                <p className="text-slate-400 text-sm">
+                  {generatedCreds.emailSent ? (
+                    <span className="inline-flex items-center gap-1.5 text-emerald-400 font-medium">
+                      <Mail className="w-4 h-4" /> Password and login details have been emailed directly to <strong>{generatedCreds.email}</strong>.
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1.5 text-amber-400">
+                      <AlertTriangle className="w-4 h-4" /> Email was not sent ({generatedCreds.emailError || 'Configure SMTP in .env'}). Please share credentials manually or click Send Email below.
+                    </span>
+                  )}
+                </p>
               </div>
               <button onClick={() => setGeneratedCreds(null)} className="text-slate-500 hover:text-white p-2 rounded-full hover:bg-slate-800 transition">
                 <X className="w-5 h-5" />
@@ -152,25 +206,43 @@ export default function EmployeesPage() {
               </div>
             </div>
 
-            <button 
-              onClick={copyCreds} 
-              className={clsx(
-                "w-full sm:w-auto px-6 py-3 font-medium rounded-xl flex items-center justify-center gap-2 transition-all shadow-[0_0_20px_rgba(16,185,129,0.3)]",
-                isCopied 
-                  ? "bg-slate-800 text-emerald-400 cursor-default" 
-                  : "bg-emerald-600 hover:bg-emerald-500 text-white hover:shadow-[0_0_30px_rgba(16,185,129,0.5)]"
-              )}
-            >
-              {isCopied ? (
-                <>
-                  <CheckCircle2 className="w-5 h-5" /> Copied Successfully!
-                </>
-              ) : (
-                <>
-                  <Copy className="w-5 h-5" /> Copy to Clipboard
-                </>
-              )}
-            </button>
+            <div className="flex flex-wrap gap-3">
+              <button 
+                onClick={copyCreds} 
+                className={clsx(
+                  "w-full sm:w-auto px-6 py-3 font-medium rounded-xl flex items-center justify-center gap-2 transition-all shadow-[0_0_20px_rgba(16,185,129,0.3)]",
+                  isCopied 
+                    ? "bg-slate-800 text-emerald-400 cursor-default" 
+                    : "bg-emerald-600 hover:bg-emerald-500 text-white hover:shadow-[0_0_30px_rgba(16,185,129,0.5)]"
+                )}
+              >
+                {isCopied ? (
+                  <>
+                    <CheckCircle2 className="w-5 h-5" /> Copied Successfully!
+                  </>
+                ) : (
+                  <>
+                    <Copy className="w-5 h-5" /> Copy to Clipboard
+                  </>
+                )}
+              </button>
+
+              <button
+                onClick={handleResendEmail}
+                disabled={isSendingEmail}
+                className="w-full sm:w-auto px-6 py-3 font-medium rounded-xl bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white flex items-center justify-center gap-2 transition-all shadow-[0_0_20px_rgba(59,130,246,0.3)]"
+              >
+                {isSendingEmail ? (
+                  <>
+                    <RefreshCw className="w-5 h-5 animate-spin" /> Sending Email...
+                  </>
+                ) : (
+                  <>
+                    <Mail className="w-5 h-5" /> {generatedCreds.emailSent ? 'Resend Email' : 'Send Credentials via Email'}
+                  </>
+                )}
+              </button>
+            </div>
           </div>
         </div>
       )}
