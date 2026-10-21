@@ -3,6 +3,7 @@ import prisma from '@/lib/prisma';
 import bcrypt from 'bcrypt';
 import { verifyJWT } from '@/lib/auth';
 import { cookies } from 'next/headers';
+import { sendUserCredentialsEmail } from '@/lib/email';
 
 async function checkAdmin() {
   const cookieStore = await cookies();
@@ -70,7 +71,24 @@ export async function POST(request: Request) {
       })
     ]);
 
-    return NextResponse.json({ employee, tempPassword });
+    const url = new URL(request.url);
+    const loginUrl = `${url.origin}/login`;
+
+    // Send credentials to new user's email
+    const emailResult = await sendUserCredentialsEmail({
+      to: data.email,
+      name: data.name,
+      password: tempPassword,
+      role: 'USER',
+      loginUrl,
+    });
+
+    return NextResponse.json({
+      employee,
+      tempPassword,
+      emailSent: emailResult.success,
+      emailError: emailResult.error || null,
+    });
   } catch (error) {
     console.error(error);
     return NextResponse.json({ error: 'Failed to create employee' }, { status: 500 });

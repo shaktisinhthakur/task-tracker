@@ -3,6 +3,7 @@ import prisma from '@/lib/prisma';
 import bcrypt from 'bcrypt';
 import { verifyJWT } from '@/lib/auth';
 import { cookies } from 'next/headers';
+import { sendUserCredentialsEmail } from '@/lib/email';
 
 async function checkAdmin() {
   const cookieStore = await cookies();
@@ -50,8 +51,24 @@ export async function POST(request: Request) {
       },
       select: { id: true, name: true, email: true, role: true, createdAt: true }
     });
+
+    const url = new URL(request.url);
+    const loginUrl = `${url.origin}/login`;
+
+    // Send credentials to user's email address
+    const emailResult = await sendUserCredentialsEmail({
+      to: data.email,
+      name: data.name,
+      password: data.password,
+      role: data.role || 'USER',
+      loginUrl,
+    });
     
-    return NextResponse.json(user);
+    return NextResponse.json({
+      ...user,
+      emailSent: emailResult.success,
+      emailError: emailResult.error || null,
+    });
   } catch (error) {
     console.error(error);
     return NextResponse.json({ error: 'Failed to create user' }, { status: 500 });
